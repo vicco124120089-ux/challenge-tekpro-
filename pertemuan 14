@@ -1,0 +1,477 @@
+
+# colormap (cmap)
+
+import io
+import streamlit as st
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
+
+
+# DATA MAGNETIK DARI USER
+
+raw_data = """
+x	y	t_obs
+1.23	52.1	45005.12
+51.45	49.88	45009.34
+102.1	50.55	45013.78
+148.9	48.2	45018.12
+201.3	51.15	45022.45
+249.5	50.9	45026.89
+302.1	49.45	45031.23
+351.8	51.6	45036.56
+398.2	50.1	45041.89
+452.4	49.9	45048.23
+501.1	52.3	45055.67
+548.9	50.4	45062.12
+602.3	51.2	45065.45
+651.5	49.8	45068.78
+702.1	50.15	45070.12
+751.4	51.1	45072.34
+801.2	49.9	45074.56
+849.8	50.3	45076.89
+901.5	51.4	45078.12
+952.1	49.7	45080.45
+1001.2	50.9	45082.67
+"""
+
+# Convert string → DataFrame
+from io import StringIO
+df = pd.read_csv(StringIO(raw_data), sep="\t")
+
+
+# INTERPOLASI KE GRID
+
+x = df["x"].values
+y = df["y"].values
+t = df["t_obs"].values
+
+# Grid untuk peta kontur
+xi = np.linspace(min(x), max(x), 200)
+yi = np.linspace(min(y), max(y), 200)
+Xi, Yi = np.meshgrid(xi, yi)
+
+Ti_obs = griddata((x, y), t, (Xi, Yi), method='cubic')
+
+
+# PEMISAHAN REGIONAL
+
+# Model regional sederhana = bidang miring (polinomial orde-1)
+coef = np.polyfit(x, t, 1)
+regional_1d = np.polyval(coef, xi)
+Ti_regional = np.tile(regional_1d, (200, 1))
+
+# Residual = Observasi - Regional
+Ti_residual = Ti_obs - Ti_regional
+
+
+# SIDEBAR
+
+st.sidebar.title("Pengaturan Colormap")
+
+cmap = st.sidebar.selectbox(
+    "Pilih Colormap",
+    ["seismic", "gray", "viridis", "plasma", "inferno", "magma", "turbo"]
+)
+
+
+# FUNGSI PLOT
+
+def plot_map(data, title):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(
+        data,
+        extent=[min(x), max(x), min(y), max(y)],
+        origin="lower",
+        cmap=cmap,
+        aspect="auto"
+    )
+    ax.set_title(title)
+    ax.set_xlabel("X (meter)")
+    ax.set_ylabel("Y (meter)")
+    plt.colorbar(im, ax=ax, label="nT")
+    st.pyplot(fig)
+
+
+# TAMPILKAN PETA
+
+st.title("Peta Anomali Magnetik")
+
+st.subheader("Anomali Observasi")
+plot_map(Ti_obs, "Peta Anomali Observasi")
+
+st.subheader("Anomali Regional")
+plot_map(Ti_regional, "Peta Anomali Regional")
+
+st.subheader("Anomali Residual")
+plot_map(Ti_residual, "Peta Anomali Residual")
+
+
+
+# DATA MAGNETIK (contoh dari user)
+
+raw_data = """
+x	y	t_obs
+1.23	52.1	45005.12
+51.45	49.88	45009.34
+102.1	50.55	45013.78
+148.9	48.2	45018.12
+201.3	51.15	45022.45
+249.5	50.9	45026.89
+302.1	49.45	45031.23
+351.8	51.6	45036.56
+398.2	50.1	45041.89
+452.4	49.9	45048.23
+501.1	52.3	45055.67
+548.9	50.4	45062.12
+602.3	51.2	45065.45
+651.5	49.8	45068.78
+702.1	50.15	45070.12
+751.4	51.1	45072.34
+801.2	49.9	45074.56
+849.8	50.3	45076.89
+901.5	51.4	45078.12
+952.1	49.7	45080.45
+1001.2	50.9	45082.67
+"""
+
+df = pd.read_csv(StringIO(raw_data), sep="\t")
+
+
+# INTERPOLASI GRID
+
+x = df["x"].values
+y = df["y"].values
+t = df["t_obs"].values
+
+xi = np.linspace(min(x), max(x), 200)
+yi = np.linspace(min(y), max(y), 200)
+Xi, Yi = np.meshgrid(xi, yi)
+
+Ti_obs = griddata((x, y), t, (Xi, Yi), method='cubic')
+
+
+# REGIONAL (model sederhana)
+
+coef = np.polyfit(x, t, 1)
+regional_line = np.polyval(coef, xi)
+Ti_regional = np.tile(regional_line, (200, 1))
+
+
+# RESIDUAL
+
+Ti_residual = Ti_obs - Ti_regional
+
+
+# SIDEBAR
+#
+st.sidebar.title("Pengaturan Peta Magnetik")
+
+# Colormap
+cmap = st.sidebar.selectbox(
+    "Pilih Colormap",
+    ["seismic", "gray", "viridis", "plasma", "inferno", "magma", "turbo"]
+)
+
+# Mode skala
+scale_mode = st.sidebar.radio(
+    "Mode Skala Warna",
+    ["Auto Scale", "Manual Scale"]
+)
+
+# Slider vmin/vmax hanya saat manual
+if scale_mode == "Manual Scale":
+    vmin = st.sidebar.slider(
+        "vmin (minimum)", float(t.min()), float(t.max()), float(t.min())
+    )
+    vmax = st.sidebar.slider(
+        "vmax (maximum)", float(t.min()), float(t.max()), float(t.max())
+    )
+else:
+    vmin = None
+    vmax = None
+
+
+# FUNGSI PLOT
+
+def plot_map(data, title):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(
+        data,
+        extent=[min(x), max(x), min(y), max(y)],
+        origin="lower",
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        aspect="auto"
+    )
+    ax.set_title(title)
+    ax.set_xlabel("X (meter)")
+    ax.set_ylabel("Y (meter)")
+    plt.colorbar(im, ax=ax, label="nT")
+    st.pyplot(fig)
+
+
+# TAMPILKAN PETA
+
+st.title("Peta Anomali Magnetik dengan Kontrol vmin/vmax")
+
+st.subheader("Anomali Observasi")
+plot_map(Ti_obs, "Anomali Observasi")
+
+st.subheader("Anomali Regional")
+plot_map(Ti_regional, "Anomali Regional")
+
+st.subheader("Anomali Residual")
+plot_map(Ti_residual, "Anomali Residual")
+
+
+# DATA MAGNETIK USER
+
+raw_data = """
+x	y	t_obs
+1.23	52.1	45005.12
+51.45	49.88	45009.34
+102.1	50.55	45013.78
+148.9	48.2	45018.12
+201.3	51.15	45022.45
+249.5	50.9	45026.89
+302.1	49.45	45031.23
+351.8	51.6	45036.56
+398.2	50.1	45041.89
+452.4	49.9	45048.23
+501.1	52.3	45055.67
+548.9	50.4	45062.12
+602.3	51.2	45065.45
+651.5	49.8	45068.78
+702.1	50.15	45070.12
+751.4	51.1	45072.34
+801.2	49.9	45074.56
+849.8	50.3	45076.89
+901.5	51.4	45078.12
+952.1	49.7	45080.45
+1001.2	50.9	45082.67
+"""
+
+df = pd.read_csv(StringIO(raw_data), sep="\t")
+
+x = df["x"].values
+y = df["y"].values
+t = df["t_obs"].values
+
+
+# INTERPOLASI GRID
+
+xi = np.linspace(min(x), max(x), 200)
+yi = np.linspace(min(y), max(y), 200)
+Xi, Yi = np.meshgrid(xi, yi)
+
+Ti_obs = griddata((x, y), t, (Xi, Yi), method="cubic")
+
+
+# REGIONAL
+
+coef = np.polyfit(x, t, 1)
+regional_1d = np.polyval(coef, xi)
+Ti_regional = np.tile(regional_1d, (200, 1))
+
+# Residual
+Ti_residual = Ti_obs - Ti_regional
+
+
+# SIDEBAR CONTROL
+
+st.sidebar.title("Pengaturan Peta Magnetik")
+
+# --- Colormap ---
+cmap = st.sidebar.selectbox(
+    "Pilih Colormap",
+    ["seismic", "gray", "viridis", "plasma", "inferno", "magma", "turbo"]
+)
+
+# Mode Auto / Manual
+mode_scale = st.sidebar.radio(
+    "Mode Skala Warna",
+    ["Auto Scale", "Manual Scale"]
+)
+
+if mode_scale == "Manual Scale":
+    all_values = np.hstack([Ti_obs.flatten(), Ti_regional.flatten(), Ti_residual.flatten()])
+    vmin = st.sidebar.slider("vmin (Minimum)", float(all_values.min()), float(all_values.max()), float(all_values.min()))
+    vmax = st.sidebar.slider("vmax (Maksimum)", float(all_values.min()), float(all_values.max()), float(all_values.max()))
+else:
+    vmin = None
+    vmax = None
+
+
+# FUNGSI PLOT
+
+def plot_map(data, title):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(
+        data,
+        extent=[min(x), max(x), min(y), max(y)],
+        origin="lower",
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        aspect="auto"
+    )
+    ax.set_title(title)
+    ax.set_xlabel("X (meter)")
+    ax.set_ylabel("Y (meter)")
+    plt.colorbar(im, ax=ax, label="nT")
+    st.pyplot(fig)
+
+
+# TAMPILKAN PETA
+
+st.title("Peta Anomali Magnetik Interaktif")
+
+st.subheader("Anomali Observasi")
+plot_map(Ti_obs, "Peta Anomali Observasi")
+
+st.subheader("Anomali Regional")
+plot_map(Ti_regional, "Peta Anomali Regional")
+
+st.subheader("Anomali Residual")
+plot_map(Ti_residual, "Peta Anomali Residual")
+
+
+
+# DATA MAGNETIK DARI USER
+
+raw_data = """
+x   y   t_obs
+1.23 52.1 45005.12
+51.45 49.88 45009.34
+102.1 50.55 45013.78
+148.9 48.2 45018.12
+201.3 51.15 45022.45
+249.5 50.9 45026.89
+302.1 49.45 45031.23
+351.8 51.6 45036.56
+398.2 50.1 45041.89
+452.4 49.9 45048.23
+501.1 52.3 45055.67
+548.9 50.4 45062.12
+602.3 51.2 45065.45
+651.5 49.8 45068.78
+702.1 50.15 45070.12
+751.4 51.1 45072.34
+801.2 49.9 45074.56
+849.8 50.3 45076.89
+901.5 51.4 45078.12
+952.1 49.7 45080.45
+1001.2 50.9 45082.67
+"""
+
+from io import StringIO
+df = pd.read_csv(StringIO(raw_data), sep="\s+")
+
+
+# INTERPOLASI GRID
+
+x = df["x"].values
+y = df["y"].values
+t = df["t_obs"].values
+
+# Grid 200 × 200
+xi = np.linspace(min(x), max(x), 200)
+yi = np.linspace(min(y), max(y), 200)
+Xi, Yi = np.meshgrid(xi, yi)
+
+Ti_obs = griddata((x, y), t, (Xi, Yi), method='cubic')
+
+
+# REGIONAL & RESIDUAL
+
+coef = np.polyfit(x, t, 1)
+regional_line = np.polyval(coef, xi)
+Ti_regional = np.tile(regional_line, (200, 1))
+
+Ti_residual = Ti_obs - Ti_regional
+
+
+# SIDEBAR
+
+st.sidebar.title("Pengaturan Peta Magnetik")
+
+# Colormap
+cmap = st.sidebar.selectbox(
+    "Pilih Colormap",
+    ["seismic", "gray", "viridis", "plasma", "inferno", "magma", "turbo"]
+)
+
+# Mode scale
+mode_scale = st.sidebar.radio(
+    "Mode Skala Warna",
+    ["Auto Scale", "Manual Scale"]
+)
+
+if mode_scale == "Manual Scale":
+    vmin = st.sidebar.number_input("vmin (minimum)", float(t.min()), float(t.max()), float(t.min()))
+    vmax = st.sidebar.number_input("vmax (maximum)", float(t.min()), float(t.max()), float(t.max()))
+else:
+    vmin = None
+    vmax = None
+
+# Opsi flip axis
+flip_y = st.sidebar.checkbox("Balik sumbu Y (Flip Vertical)")
+
+# Opsi crop area
+st.sidebar.subheader("Crop Area (Zoom)")
+xmin = st.sidebar.number_input("X min", float(x.min()), float(x.max()), float(x.min()))
+xmax = st.sidebar.number_input("X max", float(x.min()), float(x.max()), float(x.max()))
+ymin = st.sidebar.number_input("Y min", float(y.min()), float(y.max()), float(y.min()))
+ymax = st.sidebar.number_input("Y max", float(y.min()), float(y.max()), float(y.max()))
+
+
+# FUNGSI PLOT
+
+def plot_map(data, title):
+
+    # Apply crop area
+    extent = [xmin, xmax, ymin, ymax]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(
+        np.flipud(data) if flip_y else data,
+        extent=extent,
+        origin="lower",
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        aspect="auto"
+    )
+    ax.set_title(title)
+    ax.set_xlabel("X (meter)")
+    ax.set_ylabel("Y (meter)")
+    plt.colorbar(im, ax=ax, label="nT")
+    st.pyplot(fig)
+
+    # Save image for download
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    st.download_button(
+        label=f"💾 Download {title}.png",
+        data=buf.getvalue(),
+        file_name=f"{title}.png",
+        mime="image/png"
+    )
+
+
+
+# TAMPILKAN SEMUA PETA
+
+st.title("Peta Anomali Magnetik")
+
+st.subheader("Anomali Observasi")
+plot_map(Ti_obs, "Anomali Observasi")
+
+st.subheader("Anomali Regional")
+plot_map(Ti_regional, "Anomali Regional")
+
+st.subheader("Anomali Residual")
+plot_map(Ti_residual, "Anomali Residual")
