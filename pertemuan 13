@@ -1,0 +1,271 @@
+#colormap (cmap)
+
+
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+
+st.title("Visualisasi Data Seismik dengan Colormap")
+
+
+# 1. Membuat data seismik sintetik
+
+
+# Parameter data
+n_time = 300        # jumlah sampel waktu
+n_trace = 100       # jumlah trace
+
+# Membuat data seismik syntetik (gelombang sinus + noise)
+t = np.linspace(0, 4 * np.pi, n_time)
+data = np.zeros((n_time, n_trace))
+
+for i in range(n_trace):
+    phase_shift = i * 0.1
+    data[:, i] = np.sin(t + phase_shift) * np.exp(-t * 0.2) + np.random.randn(n_time) * 0.1
+
+
+# 2. Colormap sidebar
+
+
+cmap_list = [
+    "gray", "seismic", "viridis", "plasma", "inferno", "magma",
+    "cividis", "turbo", "jet", "ocean", "gnuplot"
+]
+
+selected_cmap = st.sidebar.selectbox("Pilih Colormap (cmap):", cmap_list)
+
+
+# 3. Plot seismik
+
+
+fig, ax = plt.subplots(figsize=(10, 5))
+im = ax.imshow(data, cmap=selected_cmap, aspect='auto')
+ax.set_title(f"Plot Seismik (cmap='{selected_cmap}')")
+ax.set_xlabel("Trace")
+ax.set_ylabel("Time")
+
+plt.colorbar(im, ax=ax, label="Amplitude")
+
+st.pyplot(fig)
+
+
+# 4. Menampilkan bentuk data (opsional)
+
+st.subheader("Dimensi Data Seismik")
+st.write(f"{data.shape[0]} sampel waktu × {data.shape[1]} trace")
+
+
+
+#vmin dan vmax
+
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+# 1. DATA SEISMIK SINTETIK
+
+n_time = 300   # jumlah sampel waktu
+n_trace = 100  # jumlah trace
+
+t = np.linspace(0, 4 * np.pi, n_time)
+data = np.zeros((n_time, n_trace))
+
+for i in range(n_trace):
+    phase_shift = i * 0.1
+    data[:, i] = np.sin(t + phase_shift) * np.exp(-t * 0.2) + np.random.randn(n_time) * 0.1
+
+
+# 2. SIDEBAR SETTING
+
+st.sidebar.title("Pengaturan Visualisasi")
+
+# Pilihan colormap
+cmap_list = [
+    "gray", "seismic", "viridis", "plasma", "inferno", "magma",
+    "cividis", "turbo", "jet", "ocean", "gnuplot"
+]
+cmap_name = st.sidebar.selectbox("Pilih Colormap:", cmap_list)
+
+# Slider vmin dan vmax
+st.sidebar.subheader("Pengaturan Amplitudo")
+vmin = st.sidebar.slider("vmin (min amplitude):", float(data.min()), float(data.max()), float(data.min()))
+vmax = st.sidebar.slider("vmax (max amplitude):", float(data.min()), float(data.max()), float(data.max()))
+
+
+# 3. PLOT SEISMIK
+
+st.title("Visualisasi Data Seismik dengan Colormap & Amplitudo Control")
+
+fig, ax = plt.subplots(figsize=(10, 6))
+
+ax.imshow(
+    data,
+    cmap=cmap_name,
+    aspect="auto",
+    vmin=vmin,
+    vmax=vmax,
+    interpolation="nearest"
+)
+
+ax.set_title("Seismic Section")
+ax.set_xlabel("Trace")
+ax.set_ylabel("Time Sample")
+
+st.pyplot(fig)
+
+
+# auto scale dan manual scale
+
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+
+st.title("Visualisasi Data Seismik dengan Colormap & Scaling")
+
+
+# 1. Generate Data Seismik Sintetik
+
+n_time = 300      # jumlah sampel waktu
+n_trace = 100     # jumlah trace
+
+t = np.linspace(0, 4 * np.pi, n_time)
+data = np.zeros((n_time, n_trace))
+
+for i in range(n_trace):
+    phase_shift = i * 0.1
+    data[:, i] = np.sin(t + phase_shift) * np.exp(-t * 0.2) + np.random.randn(n_time) * 0.1
+
+
+# 2. Sidebar - Colormap
+
+cmap_list = [
+    "gray", "seismic", "viridis", "plasma", "inferno", "magma",
+    "cividis", "turbo", "jet", "ocean", "gnuplot"
+]
+
+selected_cmap = st.sidebar.selectbox("Pilih Colormap", cmap_list)
+
+# 3. Sidebar - Mode Scaling
+
+scale_mode = st.sidebar.radio(
+    "Pilih Mode Scaling",
+    ("Auto Scale", "Manual Scale")
+)
+
+# Manual vmin/vmax slider (hanya muncul jika Manual)
+if scale_mode == "Manual Scale":
+    vmin = st.sidebar.slider("vmin (Minimum Amplitudo)", float(data.min()), float(data.max()), float(data.min()))
+    vmax = st.sidebar.slider("vmax (Maksimum Amplitudo)", float(data.min()), float(data.max()), float(data.max()))
+else:
+    vmin = None
+    vmax = None
+
+
+# 4. Plot Seismik
+
+fig, ax = plt.subplots(figsize=(8, 5))
+
+if scale_mode == "Auto Scale":
+    im = ax.imshow(data, aspect="auto", cmap=selected_cmap)
+else:
+    im = ax.imshow(data, aspect="auto", cmap=selected_cmap, vmin=vmin, vmax=vmax)
+
+ax.set_title("Plot Seismik")
+ax.set_xlabel("Trace")
+ax.set_ylabel("Time Sample")
+
+plt.colorbar(im, ax=ax, label="Amplitude")
+
+st.pyplot(fig)
+
+
+
+# opsi tambahan (pilih salah satu)
+
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+import io
+
+
+# DATA SEISMIK (contoh data random)
+
+np.random.seed(0)
+data = np.random.randn(300, 100)  # (time, trace)
+
+# SIDEBAR
+
+st.sidebar.title("Pengaturan Plot Seismik")
+
+# --- Colormap ---
+cmap = st.sidebar.selectbox(
+    "Pilih Colormap",
+    ["seismic", "gray", "viridis", "plasma", "inferno", "magma", "turbo"]
+)
+
+# --- Mode Scale ---
+mode_scale = st.sidebar.radio(
+    "Mode Amplitudo",
+    ["Auto Scale", "Manual Scale"]
+)
+
+# Sliders vmin-vmax hanya tampil jika Manual Scale
+if mode_scale == "Manual Scale":
+    vmin = st.sidebar.slider("vmin (minimum)", float(data.min()), float(data.max()), float(data.min()))
+    vmax = st.sidebar.slider("vmax (maximum)", float(data.min()), float(data.max()), float(data.max()))
+else:
+    vmin = None
+    vmax = None
+
+# --- Membalik Sumbu Waktu ---
+flip_time = st.sidebar.checkbox("Balik Sumbu Waktu (Time Reverse)")
+
+# --- Rentang trace ---
+st.sidebar.subheader("Rentang Trace")
+min_trace = st.sidebar.number_input("Trace awal", 0, data.shape[1]-1, 0)
+max_trace = st.sidebar.number_input("Trace akhir", 1, data.shape[1], data.shape[1])
+
+# Pastikan batas benar
+if min_trace >= max_trace:
+    st.sidebar.error("Trace awal harus lebih kecil dari trace akhir")
+
+# PROSES DATA
+
+seis = data[:, min_trace:max_trace]
+
+if flip_time:
+    seis = np.flipud(seis)
+
+
+# PLOT
+
+st.title("Plot Seismik Interaktif")
+
+fig, ax = plt.subplots(figsize=(10, 6))
+
+im = ax.imshow(
+    seis,
+    aspect="auto",
+    cmap=cmap,
+    vmin=vmin,
+    vmax=vmax
+)
+
+ax.set_title("Seismic Section")
+ax.set_xlabel("Trace Number")
+ax.set_ylabel("Time")
+
+st.pyplot(fig)
+
+
+# Download Gambar
+
+buf = io.BytesIO()
+fig.savefig(buf, format="png")
+st.download_button(
+    label="💾 Download Gambar PNG",
+    data=buf.getvalue(),
+    file_name="seismik.png",
+    mime="image/png"
+)
